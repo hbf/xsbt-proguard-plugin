@@ -53,6 +53,8 @@ object ProguardPlugin extends Plugin {
   val proguardInJarsTask = TaskKey[Seq[File]]("proguard-in-jars-task")
   val proguardLibraryJars = TaskKey[Seq[File]]("proguard-library-jars")
 
+  val proguardInArtifactPath = TaskKey[File]("proguard-input-artifacit")
+
   def proguardInJarsTaskImpl: Initialize[Task[Seq[File]]] = {
     (dependencyClasspath in Compile, proguardInJars, proguardLibraryJars) map {
       (dc, pij, plj) =>
@@ -62,7 +64,7 @@ object ProguardPlugin extends Plugin {
   }
 
   def proguardArgsTask: Initialize[Task[List[String]]] = {
-    (proguardLibraryJars, proguardInJarsTask, artifactPath in (Compile, packageBin), makeInJarFilter, minJarPath, proguardDefaultArgs, proguardOptions, packageBin in Compile, streams) map {
+    (proguardLibraryJars, proguardInJarsTask, proguardInArtifactPath, makeInJarFilter, minJarPath, proguardDefaultArgs, proguardOptions, packageBin in Compile, streams) map {
       (plj, pij, jp, mijf, mjp, pda, po, pb, s) =>
         val proguardInJarsArg = {
           val inPaths = pij.foldLeft(Map.empty[String, File])((m, p) => m + (p.getAbsolutePath -> p)).values.iterator
@@ -90,6 +92,7 @@ object ProguardPlugin extends Plugin {
 
   val proguardSettings = Seq(
     minJarPath <<= (crossTarget, projectID, artifact, scalaVersion, artifactName) { (t, module, a, sv, toString) => t / toString(ScalaVersion(sv, CrossVersion binaryScalaVersion sv), module.copy(revision = module.revision + ".min"), a) asFile },
+    proguardInArtifactPath <<= (artifactPath in (Compile, packageBin)) map identity,
     proguardOptions := Nil,
     makeInJarFilter := { (file) => "!META-INF/MANIFEST.MF" },
     proguardDefaultArgs := Seq("-dontwarn", "-dontoptimize", "-dontobfuscate"),
